@@ -29,7 +29,8 @@ for(let i in outputWorksheet){
                 key: '',
                 count: '',
                 price: '',
-                row: row
+                row: row,
+                type: 'output'
             }
             if(outputData.length < row){
                 outputData.push(item);
@@ -39,28 +40,41 @@ for(let i in outputWorksheet){
                     outputData[row-3].key = cell.v;
                     break;
                 case 'I':
-                    outputData[row-3].key += '~' + cell.v;
+                    outputData[row-3].key += '_' + cell.v;
                     break;
                 case 'J':
-                    outputData[row-3].key += '~' + cell.v;
+                    outputData[row-3].key += '_' + cell.v;
                     break;
                 case 'K':
-                    outputData[row-3].count = cell.v;
+                    outputData[row-3].count = parseFloat(cell.v);
                     break;
                 case 'L':
-                    outputData[row-3].price = cell.v;
+                    outputData[row-3].price = parseFloat(cell.v);
                     break;
             }
         }
     }
 }
 // 去除小计 去除无数据行
-outputData = outputData.filter(e => (e.key && e.key.indexOf('小计') == -1));
+outputData = outputData.filter(e => (e.key && e.key.indexOf('小计') == -1 && e.key.indexOf('__') == -1));
 noRpeatKey(outputData);
 console.log(outputData.length);
 
 function noRpeatKey(data){
-    
+    let arr = [];
+    data.forEach(e => {
+        if(!arr.find(item => item.key == e.key)){
+            arr.push(e);
+            
+        }else{
+            // console.log('repeat', e);
+            console.log(arr.find(item => item.key == e.key));
+            arr[arr.findIndex(item => item.key == e.key)].count += e.count;
+            arr[arr.findIndex(item => item.key == e.key)].price += e.price;
+            console.log(arr.find(item => item.key == e.key));
+        }
+    })
+    // console.log(arr);
 }
 // 处理进项
 let incomeData = [];
@@ -77,7 +91,8 @@ worksheetList.forEach(worksheet=>{
                     key: '',
                     count: '',
                     price: '',
-                    row: row
+                    row: row,
+                    type: 'income'
                 }
                 if(incomeData.length < row){
                     incomeData.push(item);
@@ -88,16 +103,16 @@ worksheetList.forEach(worksheet=>{
                         incomeData[row-3].key = cell.v;
                         break;
                     case 'H':
-                        incomeData[row-3].key += '~' + cell.v;
+                        incomeData[row-3].key += '_' + cell.v;
                         break;
                     case 'I':
-                        incomeData[row-3].key += '~' + cell.v;
+                        incomeData[row-3].key += '_' + cell.v;
                         break;
                     case 'J':
-                        incomeData[row-3].count = cell.v;
+                        incomeData[row-3].count = parseFloat(cell.v);
                         break;
                     case 'K':
-                        incomeData[row-3].price = cell.v;
+                        incomeData[row-3].price = parseFloat(cell.v);
                         break;
                 }
             }
@@ -107,5 +122,6 @@ worksheetList.forEach(worksheet=>{
 })
 // G行 开票项目默认为必有项
 // 剔除包含小计的项
-incomeData = incomeData.filter(e => (e.key && e.key.indexOf('小计') == -1));
+incomeData = incomeData.filter(e => (e.key && e.key.indexOf('小计') == -1 && e.key.indexOf('__') == -1));
+noRpeatKey(incomeData);
 // console.log(incomeData);
