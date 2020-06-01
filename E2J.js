@@ -123,17 +123,21 @@ worksheetList.forEach((worksheet, idx)=>{
 })
 // G行 开票项目默认为必有项
 // 剔除包含小计的项
-totalData.forEach(item => {
+totalData = totalData.map(item => {
     // && e.detail.key.indexOf('__') == -1
-    item = item.filter(e => (e.detail.key && e.detail.key.indexOf('小计') == -1));
-    item.forEach(e => {
-        if (e.key == '') {
-            console.log(e.row);
-        }
-    })
+    item = item.filter(e => (e.detail.key && e.detail.key.indexOf('小计') == -1 && e.detail.key.indexOf('合计') == -1));
+    console.dir(item);
+    // item.forEach(e => {
+    //     // console.log(e.detail.key);
+    //     if (e.detail.key == '' || e.detail.key.indexOf('合计') != -1) {
+    //         console.log(e.row);
+    //     }
+    // })
     noRpeatKey(item);
+    return item;
     // console.log(item.length);
 })
+// return;
 // console.log(totalData.length);
 function noRpeatKey(data){
     let arr = [];
@@ -170,31 +174,34 @@ let data = mainData.map((item) => {
     let dataItem = {
         key: id,
         // 名称
-        name: id.split('=')[0],
+        name: id.split('=')[0].replace(/\*([^\*]+)\*/g,''),
         // 规格
         spe: id.split('=')[1] || '',
         // 单位
         unit: id.split('=')[2] || '',
         [item.type + '_count']: item.detail.count,
-        [item.type + '_price']: item.detail.price,
         [item.type + '_price_unit']: 0,
+        [item.type + '_price']: item.detail.price,
         [key1 + '_count']: data1.detail.count || 0,
-        [key1 + '_price']: data1.detail.price || 0,
         [key1 + '_price_unit']: 0,
+        [key1 + '_price']: data1.detail.price || 0,
         [key2 + '_count']: data2.detail.count || 0,
-        [key2 + '_price']: data1.detail.price || 0,
         [key2 + '_price_unit']: 0,
+        [key2 + '_price']: data1.detail.price || 0,
+        final_count: 0,
+        final_price_unit: 0,
+        final_price: 0
     }
     return dataItem;
 });
 // 计算单价
 data = data.map(e => {
-    e.income_price_unit = calNum(e.income_price, e.income_count) || 0;
-    e.output_price_unit = calNum(e.output_price, e.output_count) || 0;
+    e.income_price_unit = calNum(e.income_price + e.in_out_price, e.income_count + e.in_out_count ) || 0;
+    e.output_price_unit = e.income_price_unit;
     e.in_out_price_unit = calNum(e.in_out_price, e.in_out_count) || 0;
     // 计算期末
-    e.final_count = e.in_out_count + e.income_count - e.output_count;
     e.final_price = e.in_out_price + e.income_price - e.output_price;
+    e.final_count = e.in_out_count + e.income_count - e.output_count;
     e.final_price_unit = calNum(e.final_price, e.final_count) || 0;
     // 8.计算‘销项’的‘单价’，若‘期初’和‘进项’的‘数量’都为0，则‘销项金额’=0.9*‘销项金额’，若‘期初’和‘进项’的‘数量’不全为0， 则‘销项单价’=‘进项单价’，‘销项金额’=‘销项数量’*‘销项单价’
     if (!e.income_count && !e.in_out_count) {
@@ -262,6 +269,7 @@ console.log('values', values);
 // }]
 // return;
 function _getVal(data, choosenKeys) { 
+    console.log(data);
     return data.map(e =>
         choosenKeys.map(j => {
             // if (j.indexOf('in_out') != -1) {
@@ -283,12 +291,13 @@ exportExcel('result', {sheet1: [values, ..._getVal(data, keys)]})
 function exportExcel(fileName, data) {
     let wb = XLSX.readFile('schema.xlsx');
     ws = wb.Sheets[wb.SheetNames[0]];
-    console.log(ws);
+    // console.log(ws);
     // 可以单独修改sheet内某一项的值
     // ws['A3'].v = Date.now();
     // console.log(ws['A3']);
     // let wb = XLSX.utils.book_new();
     for (let i in data) {
+        console.log(data[i].slice(1790));
         // let tmp = XLSX.utils.aoa_to_sheet(data[i], { origin: 'A5' });
         XLSX.utils.sheet_add_aoa(ws, data[i], { origin: 'A5' })
         // XLSX.utils.book_append_sheet(wb, tmp, i);
