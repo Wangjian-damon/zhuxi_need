@@ -9,11 +9,12 @@ let worksheets = [] ; //所有的工作表
 //得到所有文件
 xlsList.forEach(e=>{
     let workbook = XLSX.readFile(e);
-    let worksheet = workbook.Sheets[workbook.SheetNames[0]] ;
-    worksheets.push(worksheet) ;
+    let worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    worksheets.push(worksheet);
     worksheetList.push(worksheet);
 });
-
+// json 表读为json的方法
+// console.log(XLSX.utils.sheet_to_json(worksheetList[0])[0]);
 // 处理进项
 let totalData = [[], [], []];
 // console.log(worksheetList.length);
@@ -48,10 +49,10 @@ worksheetList.forEach((worksheet, idx)=>{
                                 totalData[idx][row-3].detail.key = cell.v;
                                 break;
                             case 'H':
-                                totalData[idx][row-3].detail.key += '_' + cell.v;
+                                totalData[idx][row-3].detail.key += '=' + cell.v;
                                 break;
                             case 'I':
-                                totalData[idx][row-3].detail.key += '_' + cell.v;
+                                totalData[idx][row-3].detail.key += '=' + cell.v;
                                 break;
                             case 'J':
                                 totalData[idx][row-3].detail.count = parseFloat(cell.v);
@@ -67,10 +68,10 @@ worksheetList.forEach((worksheet, idx)=>{
                                 totalData[idx][row-3].detail.key = cell.v;
                                 break;
                             case 'I':
-                                totalData[idx][row-3].detail.key += '_' + cell.v;
+                                totalData[idx][row-3].detail.key += '=' + cell.v;
                                 break;
                             case 'J':
-                                totalData[idx][row-3].detail.key += '_' + cell.v;
+                                totalData[idx][row-3].detail.key += '=' + cell.v;
                                 break;
                             case 'K':
                                 totalData[idx][row-3].detail.count = parseFloat(cell.v);
@@ -102,10 +103,10 @@ worksheetList.forEach((worksheet, idx)=>{
                             totalData[idx][row - 6].detail.key = cell.v;
                             break;
                         case 'B':
-                            totalData[idx][row-6].detail.key += '_' + cell.v;
+                            totalData[idx][row-6].detail.key += '=' + cell.v;
                             break;
                         case 'C':
-                            totalData[idx][row-6].detail.key += '_' + cell.v;
+                            totalData[idx][row-6].detail.key += '=' + cell.v;
                             break;
                         case 'M':
                             totalData[idx][row-6].detail.count = parseFloat(cell.v);
@@ -123,7 +124,8 @@ worksheetList.forEach((worksheet, idx)=>{
 // G行 开票项目默认为必有项
 // 剔除包含小计的项
 totalData.forEach(item => {
-    item = item.filter(e => (e.detail.key && e.detail.key.indexOf('小计') == -1 && e.detail.key.indexOf('__') == -1));
+    // && e.detail.key.indexOf('__') == -1
+    item = item.filter(e => (e.detail.key && e.detail.key.indexOf('小计') == -1));
     item.forEach(e => {
         if (e.key == '') {
             console.log(e.row);
@@ -164,20 +166,24 @@ let data = mainData.map((item) => {
     let key1 = data1.type || totalData[0][0].type;
     let key2 = data2.type || totalData[1][0].type;
     // 需要的数据结构
+    // 数据结构决定表结构
     let dataItem = {
         key: id,
         // 名称
-        name: id.split('_')[0],
+        name: id.split('=')[0],
         // 规格
-        spe: id.split('_')[1] || '',
+        spe: id.split('=')[1] || '',
         // 单位
-        unit: id.split('_')[2] || '',
+        unit: id.split('=')[2] || '',
         [item.type + '_count']: item.detail.count,
         [item.type + '_price']: item.detail.price,
+        [item.type + '_price_unit']: 0,
         [key1 + '_count']: data1.detail.count || 0,
-        [key2 + '_count']: data2.detail.count || 0,
         [key1 + '_price']: data1.detail.price || 0,
+        [key1 + '_price_unit']: 0,
+        [key2 + '_count']: data2.detail.count || 0,
         [key2 + '_price']: data1.detail.price || 0,
+        [key2 + '_price_unit']: 0,
     }
     return dataItem;
 });
@@ -186,51 +192,106 @@ data = data.map(e => {
     e.income_price_unit = calNum(e.income_price, e.income_count) || 0;
     e.output_price_unit = calNum(e.output_price, e.output_count) || 0;
     e.in_out_price_unit = calNum(e.in_out_price, e.in_out_count) || 0;
+    // 计算期末
+    e.final_count = e.in_out_count + e.income_count - e.output_count;
+    e.final_price = e.in_out_price + e.income_price - e.output_price;
+    e.final_price_unit = calNum(e.final_price, e.final_count) || 0;
+    // 8.计算‘销项’的‘单价’，若‘期初’和‘进项’的‘数量’都为0，则‘销项金额’=0.9*‘销项金额’，若‘期初’和‘进项’的‘数量’不全为0， 则‘销项单价’=‘进项单价’，‘销项金额’=‘销项数量’*‘销项单价’
+    if (!e.income_count && !e.in_out_count) {
+        e.final_price *= 0.9;
+        e.final_price_unit *= 0.9;
+    }
     return e;
 });
 function calNum(num1, num2) {
     return isFinite(num1 / num2) ? num1 / num2 : 0;
 }
-console.log(data[0]);
+//
+// console.log(data[0]);
 let keys = [];
 for (let props in data[0]) {
     if (props != 'key') {
         keys.push(props)
     }
 }
+let AZarr = []
+for (let i = 65; i <= 90; i++) {
+    AZarr.push(String.fromCharCode(i))
+}
 console.log(keys);
+let colMap = {};
+keys.map((e, i) => {
+    colMap[e] = AZarr[i]
+})
+console.log(colMap);
+// return;
 let valuesMap = {
     'name': '开票项目',
     'spe': '规格型号' ,
     'unit': '计量单位',
     'in_out_count':'期初数量',
     'in_out_price':'期初金额',
+    'in_out_price_unit': '期初单价',
     'income_count': '入库数量',
-    'output_count': '出库数量',
     'income_price': '入库金额',
-    'output_price': '出库金额',
     'income_price_unit': '入库单价',
+    'output_count': '出库数量',
+    'output_price': '出库金额',
     'output_price_unit': '出库单价',
-    'in_out_price_unit': '期初单价'
+    'final_count': '期末数量',
+    'final_price': '期末金额',
+    'final_price_unit': '期末单价',
 }
 let values = keys.map(e => valuesMap[e]);
-console.log(values);
-// {
-//     sheet1: [chooseFieldValues, ..._getVal(res.result_class_total, choosenKeys)],
-// }
+console.log('values', values);
+// let values = [{
+//     A: '开票项目',
+//     B: '规格型号',
+//     C: '计量单位',
+//     D: '期初数量',
+//     E: '期初金额',
+//     F: '入库数量',
+//     G: '入库金额',
+//     H: '入库单价',
+//     I: '出库数量',
+//     J: '出库金额',
+//     K: '出库单价',
+//     L: '出库数量',
+//     M: '出库金额',
+//     N: '出库单价',
+// }]
+// return;
 function _getVal(data, choosenKeys) { 
     return data.map(e =>
         choosenKeys.map(j => {
+            // if (j.indexOf('in_out') != -1) {
+            //     return { B: e[j] };
+            // } else if (j.indexOf('income') != -1) {
+            //     return { C: e[j]}
+            // } else if (j.indexOf('output') != -1) {
+            //     return { D: e[j]}
+            // } else {
+            //     return {A: e[j]}
+            // }
+            // console.log({ [colMap[j]]: e[j] })
+            // return { [colMap[j]]: e[j] }
             return e[j];
         })
       );
 }
 exportExcel('result', {sheet1: [values, ..._getVal(data, keys)]})
 function exportExcel(fileName, data) {
-    let wb = XLSX.utils.book_new();
+    let wb = XLSX.readFile('schema.xlsx');
+    ws = wb.Sheets[wb.SheetNames[0]];
+    console.log(ws);
+    // 可以单独修改sheet内某一项的值
+    // ws['A3'].v = Date.now();
+    // console.log(ws['A3']);
+    // let wb = XLSX.utils.book_new();
     for (let i in data) {
-        let tmp = XLSX.utils.aoa_to_sheet(data[i]);
-        XLSX.utils.book_append_sheet(wb, tmp, i);
+        // let tmp = XLSX.utils.aoa_to_sheet(data[i], { origin: 'A5' });
+        XLSX.utils.sheet_add_aoa(ws, data[i], { origin: 'A5' })
+        // XLSX.utils.book_append_sheet(wb, tmp, i);
     }
     XLSX.writeFile(wb, fileName + '.xlsx');
 }
