@@ -126,7 +126,7 @@ worksheetList.forEach((worksheet, idx)=>{
 totalData = totalData.map(item => {
     // && e.detail.key.indexOf('__') == -1
     item = item.filter(e => (e.detail.key && e.detail.key.indexOf('小计') == -1 && e.detail.key.indexOf('合计') == -1));
-    // console.dir(item);
+    console.dir(item);
     // item.forEach(e => {
     //     // console.log(e.detail.key);
     //     if (e.detail.key == '' || e.detail.key.indexOf('合计') != -1) {
@@ -160,6 +160,7 @@ let maxLength = Math.max(...totalData.map(e => e.length));
 let mainData = totalData.find(e => e.length == maxLength);
 totalData.splice(totalData.findIndex(e => e.length == maxLength), 1);
 // console.log(totalData.length);
+// console.log(mainData);
 let data = mainData.map((item) => {
     let id = item.detail.key;
     // console.log(id);
@@ -244,12 +245,12 @@ let AZarr = []
 for (let i = 65; i <= 90; i++) {
     AZarr.push(String.fromCharCode(i))
 }
-// console.log(keys);
+console.log(keys);
 let colMap = {};
 keys.map((e, i) => {
     colMap[e] = AZarr[i]
 })
-// console.log(colMap);
+console.log(colMap);
 // return;
 let valuesMap = {
     'name': '开票项目',
@@ -288,7 +289,7 @@ console.log('values', values);
 // }]
 // return;
 function _getVal(data, choosenKeys) { 
-    // console.log(data);
+    console.log(data);
     return data.map(e =>
         choosenKeys.map(j => {
             // if (j.indexOf('in_out') != -1) {
@@ -312,11 +313,10 @@ function exportExcel(fileName, data) {
     ws = wb.Sheets[wb.SheetNames[0]];
     // console.log(ws);
     // 可以单独修改sheet内某一项的值
-    // ws['A3'].v = Date.now();
-    // console.log(ws['A3']);
-    // let wb = XLSX.utils.book_new();
     let now = new Date();
     ws['A3'].v = '编制日期：' + now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日';
+    // console.log(ws['A3']);
+    // let wb = XLSX.utils.book_new();
     for (let i in data) {
         // console.log(data[i].slice(1790));
         // let tmp = XLSX.utils.aoa_to_sheet(data[i], { origin: 'A5' });
